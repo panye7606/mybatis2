@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+上方第一行是 XML 声明。它定义 XML 的版本（1.0）和所使用的编码（UTF-8 : 万国码, 可显示各种语言）。
+-->
+<!--
+下方这行是对于本XML文件的结构约定,该约定位于本文件的外部，通过下面的语法被封装在一个DOCTYPE定义中
+对于文本结构的约定简称:DTD,DTD的目的是定义XML文档的结构。它使用一系列合法的元素来定义文档结构
+下面这行的意思就是说:我们以configuration这种类型来定义文本的结构,configuration这种文档结构的来源是
+public....
+-->
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<!--
+     描述文档的根元素（像在说："本文档是configuration文档"）
+     元素类型为 "configuration" 的内容必须匹配
+     properties>settings>typeAliases>typeHandlers>objectFactory>objectWrapperFactory>
+     reflectorFactory>plugins>environments>databaseIdProvider>mappers
+-->
+<configuration>
+         <!-- 本xml中省略了元素properties-->
+    <!--
+    typeAiases(别名)需重点掌握
+    在mapper.xml中，定义很多的statement，statement需要parameterType指定输入参数的类型、需要resultType指定输出结果的映射类型。
+如果在指定类型时输入类型全路径，不方便进行开发，可以针对parameterType或resultType指定的类型定义一些别名，在mapper.xml中通过别名定
+义，方便开发。
+有三种类型的别名
+1.mybatis默认支持的别名,主要是针对字符类型
+别名	映射的类型
+_byte	byte
+_long	long
+_short	short
+_int	int
+_integer	int
+_double	double
+_float	float
+_boolean	boolean
+string	String
+byte	Byte
+long	Long
+short	Short
+int	Integer
+integer	Integer
+double	Double
+float	Float
+boolean	Boolean
+date	Date
+decimal	BigDecimal
+bigdecimal	BigDecimal
+2.单个别名定义(在Configuration.xml)
+格式为:起始 别名定义：针对单个别名定义 type:类型的路径; alias:别名 结束
+例如 起始 typeAlias type="mybatis.po.User" alias="user" 结束
+
+3.批量定义别名(常用)
+量别名的定义:
+  起始 package:name="指定包名" 结束
+  mybatis会自动扫描包中的pojo类，自动定义别名，别名就是类名(首字母大写或小写都可以)
+  以下一行为例,就是以包"com.how2java.pojo"中的类名作为别名,方便调用,
+  本例中,package包的名字有更改,由com.how2java.pojo 更改为com.how2java.pojo2
+  所以本文档中需相应更改
+  注意区分单个别名定义与批量定义别名的语法区别,
+-->
+    <typeAliases>
+        <package name="com.how2java.pojo2"/>
+    </typeAliases>
+<!--
+配置环境（environments）
+MyBatis 可以配置成适应多种环境，这种机制有助于将 SQL 映射应用于多种数据库之中， 现实情况下有多种理由需要这么做。
+例如，开发、测试和生产环境需要有不同的配置；或者共享相同 Schema 的多个生产数据库， 想使用相同的 SQL 映射。许多类似的用例。
+不过要记住：尽管可以配置多个环境，每个 SqlSessionFactory 实例只能选择其一。
+所以，如果你想连接两个数据库，就需要创建两个 SqlSessionFactory 实例，每个数据库对应一个。
+而如果是三个数据库，就需要三个实例，依此类推，记起来很简单：
+每个数据库对应一个 SqlSessionFactory 实例
+-->
+    <!-- 和spring整合后 environments配置将废除-->
+    <environments default="development">
+        <environment id="development">
+            <!--
+事务管理器（transactionManager）
+在 MyBatis 中有两种类型的事务管理器（也就是 type=”[JDBC|MANAGED]”）：
+JDBC – 这个配置就是直接使用了 JDBC 的提交和回滚设置，它依赖于从数据源得到的连接来管理事务作用域。
+MANAGED – 这个配置几乎没做什么。它从来不提交或回滚一个连接，而是让容器来管理事务的整个生命周期（比如 JEE 应用服务器的上下文）。
+默认情况下MANAGED会关闭连接，然而一些容器并不希望这样，因此需要将 closeConnection 属性设置为 false 来阻止它默认的关闭行为
+提示如果使用 Spring + MyBatis，则没有必要配置事务管理器， 因为 Spring 模块会使用自带的管理器来覆盖前面的配置。
+这两种事务管理器类型都不需要任何属性。它们不过是类型别名，换句话说，可以使用 TransactionFactory 接口的实现类的完全限定名或类型别名代替它们。
+            -->
+            <transactionManager type="JDBC"/>
+            <!--
+            数据源（dataSource）
+
+dataSource 元素使用标准的 JDBC 数据源接口来配置JDBC连接对象的资源。
+许多 MyBatis 的应用程序会按示例中的例子来配置数据源。虽然这是可选的，但为了使用延迟加载，数据源是必须配置的。
+有三种内建的数据源类型（也就是 type=”[UNPOOLED|POOLED|JNDI]”）：
+
+UNPOOLED– 这个数据源的实现只是每次被请求时打开和关闭连接。虽然有点慢，但对于在数据库连接可用性方面没有太高要求的简单应用程序来说，是一个很好的选择。
+不同的数据库在性能方面的表现也是不一样的，对于某些数据库来说，使用连接池并不重要，这个配置就很适合这种情形。
+UNPOOLED 类型的数据源仅仅需要配置以下 5 种属性：
+driver – 这是 JDBC 驱动的 Java 类的完全限定名（并不是 JDBC 驱动中可能包含的数据源类）。
+url – 这是数据库的 JDBC URL 地址。
+username – 登录数据库的用户名。
+password – 登录数据库的密码。
+defaultTransactionIsolationLevel – 默认的连接事务隔离级别。
+作为可选项，你也可以传递属性给数据库驱动。要这样做，属性的前缀为“driver.”，例如：
+driver.encoding=UTF8
+这将通过 DriverManager.getConnection(url,driverProperties) 方法传递值为 UTF8 的 encoding 属性给数据库驱动。
+
+第二种:POOLED– 这种数据源的实现利用“池”的概念将 JDBC 连接对象组织起来，避免了创建新的连接实例时所必需的初始化和认证时间。
+这是一种使得并发 Web 应用快速响应请求的流行处理方式。
+除了上述提到 UNPOOLED 下的属性外，还有更多属性用来配置 POOLED 的数据源：
+poolMaximumActiveConnections – 在任意时间可以存在的活动（也就是正在使用）连接数量，默认值：10
+poolMaximumIdleConnections – 任意时间可能存在的空闲连接数。
+poolMaximumCheckoutTime – 在被强制返回之前，池中连接被检出（checked out）时间，默认值：20000 毫秒（即 20 秒）
+poolTimeToWait – 这是一个底层设置，如果获取连接花费了相当长的时间，连接池会打印状态日志并重新尝试获取一个连接（避免在
+误配置的情况下一直安静的失败），默认值：20000 毫秒（即 20 秒）。
+poolMaximumLocalBadConnectionTolerance – 这是一个关于坏连接容忍度的底层设置， 作用于每一个尝试从缓存池获取连接的线程.
+如果这个线程获取到的是一个坏的连接，那么这个数据源允许这个线程尝试重新获取一个新的连接，
+但是这个重新尝试的次数不应该超过 poolMaximumIdleConnections 与 poolMaximumLocalBadConnectionTolerance 之和。
+默认值：3 (新增于 3.4.5)
+poolPingQuery – 发送到数据库的侦测查询，用来检验连接是否正常工作并准备接受请求。默认是“NO PING QUERY SET”，
+这会导致多数数据库驱动失败时带有一个恰当的错误消息。
+poolPingEnabled – 是否启用侦测查询。若开启，需要设置 poolPingQuery 属性为一个可执行的 SQL 语句
+（最好是一个速度非常快的 SQL 语句），默认值：false。
+poolPingConnectionsNotUsedFor – 配置 poolPingQuery 的频率。
+可以被设置为和数据库连接超时时间一样，来避免不必要的侦测，默认值：0（即所有连接每一时刻都被侦测 — 当然仅当 poolPingEnabled 为 true 时适用）。
+本xml中仅配置了4个属性,其余未配置的,都意味着选用默认配置
+本次依照例题中需修改url参数,其余参数一致
+            -->
+
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.jdbc.Driver"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/xiuzhenyuan?characterEncoding=UTF-8"/>
+                <property name="username" value="root"/>
+                <property name="password" value="123456"/>
+            </dataSource>
+        </environment>
+    </environments>
+    <!--映射器（mappers）
+既然 MyBatis 的行为已经由上述元素配置完了，我们现在就要定义 SQL 映射语句了。但是首先我们需要告诉 MyBatis 到哪里去找到这些语句。
+Java 在自动查找这方面没有提供一个很好的方法，所以最佳的方式是告诉 MyBatis 到哪里去找映射文件。你可以使用相对于类路径的资源引用，
+或完全限定资源定位符（包括 file:/// 的 URL），或类名和包名等。例如：
+使用相对于类路径的资源引用:mapper resource="org/mybatis/builder/AuthorMapper.xml"
+使用完全限定资源定位符（URL):mapper url="file:///var/mappers/AuthorMapper.xml"
+使用映射器接口实现类的完全限定类名:mapper class="org.mybatis.builder.AuthorMapper"
+将包内的映射器接口实现全部注册为映射器:package name="org.mybatis.builder"
+    -->
+    <mappers>
+        <mapper resource="com/how2java/pojo2/BMTableReflection.xml"/>
+    </mappers>
+</configuration>
+<!--
+其余内容本配置文件未涉及,就没有展开,具体参考
+http://www.mybatis.org/mybatis-3/zh/configuration.html#typeHandlers
+-->

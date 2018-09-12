@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--xml文档的版本 字符类型 -->
+<!--xml文档的文档结构类型为mapper -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--此mapper映射文件id为com.how2java.pojo2 -->
+<mapper namespace="com.how2java.pojo2">
+    <insert id="insertBMTableReflection" parameterType="BMTableReflection" >
+            insert into BMTableReflection_ ( name ) values (#{name})
+        </insert>
+
+    <delete id="deleteBMTableReflection" parameterType="BMTableReflection" >
+            delete from BMTableReflection_ where id= #{id}
+        </delete>
+
+    <select id="getBMTableReflection" parameterType="_int" resultType="BMTableReflection">
+            select * from   BMTableReflection_  where id= #{id}
+        </select>
+
+    <update id="updateBMTableReflection" parameterType="BMTableReflection" >
+            update BMTableReflection_ set name=#{name} where id=#{id}
+        </update>
+    <!-- 这条sql语句用id: listBMTableReflection 进行标示以供后续代码调用。
+    resultType="BMTableRefletion" 表示返回的数据和Category关联起来，
+    这里本应该使用的是 com.how2java.pojo2.BMTableReflection, 但是因为上一步配置了别名，
+    所以直接使用Category就行了 -->
+    <select id="listBMTableReflection" resultType="BMTableReflection">
+            <!--里面定义了一条sql语句,sql语句知识点后面详细讲解-->
+
+            select * from BMTableReflection_
+        </select>
+    <select id="listBMTableReflection2"  parameterType="string" resultType="BMTableReflection">
+              select * from   BMTableReflection_  where name like concat('%',#{0},'%')
+  </select>
+    <select id="listBMTableReflection3"  parameterType="map" resultType="BMTableReflection">
+              select * from   BMTableReflection_  where id>#{id} and name like concat('%',#{name},'%')
+  </select>
+</mapper>

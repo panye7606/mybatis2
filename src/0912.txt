@@ -1,0 +1,478 @@
+  1.配置映射文件BMTableReflection.xml
+  在包com.how2java.pojo2下，新建文件BMTableReflection.xml,与表格对应实体类BMTableReflection在同一个包下
+  MyBatis 的真正强大在于它的映射语句，也是它的魔力所在。由于它的异常强大，映射器的 XML 文件就显得相对简单。
+  如果拿它跟具有相同功能的 JDBC 代码进行对比，你会立即发现省掉了将近 95% 的代码。MyBatis 就是针对 SQL 构建的，并且比普通的方法做的更好。
+
+  SQL 映射文件有很少的几个顶级元素（按照它们应该被定义的顺序）：
+
+  cache – 给定命名空间的缓存配置。
+  cache-ref – 其他命名空间缓存配置的引用。
+  resultMap – 是最复杂也是最强大的元素，用来描述如何从数据库结果集中来加载对象。
+  sql – 可被其他语句引用的可重用语句块。
+  insert – 映射插入语句
+  update – 映射更新语句
+  delete – 映射删除语句
+  select – 映射查询语句
+
+  2.建测试类TestMybatis
+  在com.how2java包下新建测试类TestMybatis
+  先照搬修改后试运行,发现以下bug
+  bug1,拼写错误
+
+  bug2
+  Exception in thread "main" org.apache.ibatis.exceptions.PersistenceException:
+  Caused by: org.apache.ibatis.builder.BuilderException: Error creating document instance.
+  Cause: org.xml.sax.SAXParseException; lineNumber: 2; columnNumber: 6; 不允许有匹配 "[xX][mM][lL]" 的处理指令目标。
+  应该是配置文件出错
+  原因:后查明是第一行没有顶行,第一行空行导致的,xml是严格的树结构,第一行必须有内容且是固定内容,不能为空及其他,不能为注释
+
+  bug3
+  Exception in thread "main" org.apache.ibatis.exceptions.PersistenceException:
+  ### Error building SqlSession.
+  ### The error may exist in com/how2java/pojo2/mybatis2-config.xml
+  ### Cause: org.apache.ibatis.builder.BuilderException: Error parsing SQL Mapper Configuration. Cause:
+  java.io.IOException: Could not find resource com/how2java/pojo2/mybatis2-config.xml
+  原因:配置文件中,映射文件的文件名写错了
+
+  bug4:
+  Exception in thread "main" org.apache.ibatis.exceptions.PersistenceException:
+  ### Error querying database.  Cause: com.mysql.jdbc.exceptions.MySQLSyntaxErrorException:
+  Table 'xiuzhenyuan.bmtablerefletion_' doesn't exist
+  ### The error may exist in com/how2java/pojo2/BMTableReflection.xml
+  ### The error may involve defaultParameterMap
+  ### The error occurred while setting parameters
+  ### SQL: select * from BMTableRefletion_
+  ### Cause: com.mysql.jdbc.exceptions.MySQLSyntaxErrorException: Table 'xiuzhenyuan.bmtablerefletion_' doesn't exist
+  原因:拼写错误 select * from BMTableReflection_ 拼错,字母少c
+
+  3.以上4个拼错错误的bug找出以后,正常运行了
+
+  张三
+  李四
+  Process finished with exit code 0
+  结论:1,所有的命名,必须短小精悍,能不用缩写就不用缩写,但是能用简短的单词,不要用长的
+      2,易出错的环节和位置,应加强检查,特别是调用文件\调用接口\调用类\调用数据库及表格等,
+      在使用自己编撰的名词时,码完就检查,不要等着系统报错再检查,太TMD难找了!
+
+  4.完成对测试类的注释,代码如下
+
+  5.基本原理
+    1. 应用程序找Mybatis要数据
+    2. mybatis从数据库中找来数据
+    2.1 通过mybatis-config.xml 定位哪个数据库
+    2.2 通过Category.xml执行对应的select语句
+    2.3 基于Category.xml把返回的数据库记录封装在Category对象中
+    2.4 把多个Category对象装在一个Category集合中
+    3. 返回一个Category集合
+
+    [应用程序(本例题中指测试类TestMyatis)]----(索要数据)---->[mybatis]<-------(提供数据)--------[数据库]
+                                                          |
+                                                          |
+                                                          |
+                                                          |
+                                                      [  数据集合  ]
+  mybatis需要两个核心文件:配置文件和映射文件
+
+  6.配置文件
+    1.一般好像命名为*config.xml,(config,配置,布局的意思)
+    2.文件是xml格式的,每一行都是一个节点,每个节点都有相应的逻辑关系
+    3.作为配置文件和映射文件的,有固定的结构模板,就是第二行<!DOCTYEPE configuration|mapper>,两种格式
+    4.configuration作为mybatis的配置文件,由以下固定结构内容构成,好像部分内容可以省略
+      .properties 属性
+      .settings 设置
+      .typeAliases 类型别名
+      .typeHandlers 类型处理器
+      .objectFactory 对象工厂
+      .plugins 插件
+      .environments 环境
+        .environment 环境变量
+           .transactionManager 事务管理器
+           .dataSource 数据源
+      .databaseIdProvider 数据库厂商标识
+      .mappers 映射器
+      上文中有以下部分省略objectWrapperFactory\reflectorFactory,以及可能我不知道的其他组成内容
+
+      4.1 properties 可省略,或者也许省略后采用的是默认值,因为没有使用过所以不算了解,可以参考的资料解释如下:
+          <properties resource="db.properties">
+          作用：将数据连接单独配置在db.properties中，只需要在*Config.xml中加载db.properties的属性值，在*Config.xml中
+          就不需要对数据库连接参数进行硬编码。数据库连接参数只配置在db.properties中，方便对参数进行统一管理，其它xml可以引用该db.properties。
+      properties特性：
+      注意：
+         在properties元素体内定义的属性优先读取。
+         然后读取properties元素中resource或url加载的属性，它会覆盖已读取的同名属性。
+         最后读取parameterType传递的属性，它会覆盖已读取的同名属性
+      建议：
+      　　不要在properties元素体内添加任何属性值，只将属性值定义在properties文件中。
+         在properties文件中定义属性名要有一定的特殊性，如xxxx.xxxx(jdbc.driver)
+
+       4.2 setting 全局设置
+       这是 MyBatis 中极为重要的调整设置，它们会改变 MyBatis 的运行时行为。下表描述了设置中各项的意图、默认值等
+       链接:http://www.mybatis.org/mybatis-3/zh/configuration.html
+       配置完整的示例也在
+       这个设置相当于对mybatis的一些参数\性能进行调整,以适应相应的要求,需要单独研究,初学阶段不展开,只需要知道,这个是调整mybatis的一些运行行为即
+       可,同样的配置和文件,setting内容不同,运行效果,运行方式不同,相当于修改游戏参数,比如难度\出兵时间\怪物级别\怪物的移动速度等等
+
+       4.3 typeAliases 类型别名
+       为了准确的找到一个类,那么需要这样一长串字符才能准确定位:com.how2java.pojo2.BMTableReflection,这么长很容易拼错,然后bug特别多,为了减
+       少类似的错误,就用typeAliases来定义一个别名替代这么长的名字,
+       <typeAlias alias="BMTableReflection" type="com.how2java.pojo2.BMTableReflection"/>
+       之后需要使用com.how2java.pojo2.BMTableReflection的地方,都可以用别名BMTableReflection替代,少码点字,少犯点错
+       为了减少定义别名时针对每一个类都要写一行,大家就约定一起偷个懒,写个包名,表示该包下所有的类名作为该类的别名,在xml文件中替代该类
+       <package name="com.how2java.pojo2"/>
+       批量定义以后,该包下所有类的类名作为别名替代该类,真是很符合程序员的偷懒精神
+       注意:每一个在包 domain.blog 中的 Java Bean，在没有注解的情况下，会使用 Bean 的首字母小写的非限定类名来作为它的别名。
+       比如 domain.blog.Author 的别名为 author；若有注解，则别名为其注解值。
+
+
+       4.4 typeHandlers 类型处理器
+       例句:<transactionManager type="JDBC"/>
+       无论是 MyBatis 在预处理语句（PreparedStatement）中设置一个参数时，还是从结果集中取出一个值时，
+       都会用类型处理器将获取的值以合适的方式转换成 Java 类型。
+       你可以重写类型处理器或创建你自己的类型处理器来处理不支持的或非标准的类型。 具体做法为：实现 org.apache.ibatis.type.TypeHandler 接口，
+       或继承一个很便利的类 org.apache.ibatis.type.BaseTypeHandler， 然后可以选择性地将它映射到一个 JDBC 类型。
+       例句的意思,用JDBC类型处理设置的参数和从结果中取出的值
+
+       4.5 .objectFactory 对象工厂
+       MyBatis 每次创建结果对象的新实例时，它都会使用一个对象工厂（ObjectFactory）实例来完成。 默认的对象工厂需要做的仅仅是实例化目标类，
+       要么通过默认构造方法，要么在参数映射存在的时候通过参数构造方法来实例化。 如果想覆盖对象工厂的默认行为，则可以通过创建自己的对象工厂来实现
+       本例中本节点省略了,意味着可能采用的是mybatis默认的方式实现,比如无参构造法实例化目标类来生成一个新的对象
+
+       4.6 plugins 插件
+       MyBatis 允许你在已映射语句执行过程中的某一点进行拦截调用。默认情况下，MyBatis 允许使用插件来拦截的方法调用包括：
+       Executor (update, query, flushStatements, commit, rollback, getTransaction, close, isClosed)
+       ParameterHandler (getParameterObject, setParameters)
+       ResultSetHandler (handleResultSets, handleOutputParameters)
+       StatementHandler (prepare, parameterize, batch, update, query)
+       这个功能没有理解,将来在实例中去理解
+
+       4.7 environments 环境  environment 环境变量
+       和spring整合后 environments配置将废除,在spring中完成该部分学习
+
+       4.8 transactionManager 事务管理器
+       使用 Spring + MyBatis，则没有必要配置事务管理器， 因为 Spring 模块会使用自带的管理器来覆盖前面的配置。
+       在 MyBatis 中有两种类型的事务管理器（也就是 type=”[JDBC|MANAGED]”）
+       JDBC – 这个配置就是直接使用了 JDBC 的提交和回滚设置，它依赖于从数据源得到的连接来管理事务作用域。
+       MANAGED – 这个配置几乎没做什么。它从来不提交或回滚一个连接，而是让容器来管理事务的整个生命周期（比如 JEE 应用服务器的上下文）。
+       默认情况下它会关闭连接，
+
+       4.9 dataSource 数据源
+       参照前一篇日报中的xml文件中的注释
+
+       4.10 databaseIdProvider 数据库厂商标识
+       不了解,没用过
+
+       4.11 mappers 映射器
+       参照前一篇日报中的xml文件中的注释
+
+  7.映射文件 Mapper XML 文件
+  MyBatis 的真正强大在于它的映射语句，也是它的魔力所在。由于它的异常强大，映射器的 XML 文件就显得相对简单。如果拿它跟具有相同功能的 JDBC 代码进行对比，你会立即发现省掉了将近 95% 的代码。MyBatis 就是针对 SQL 构建的，并且比普通的方法做的更好。
+  SQL 映射文件有很少的几个顶级元素（按照它们应该被定义的顺序）：
+  cache – 给定命名空间的缓存配置。
+  cache-ref – 其他命名空间缓存配置的引用。
+  resultMap – 是最复杂也是最强大的元素，用来描述如何从数据库结果集中来加载对象。
+  parameterMap – 已废弃！老式风格的参数映射。内联参数是首选,这个元素可能在将来被移除，这里不会记录。
+  sql – 可被其他语句引用的可重用语句块。
+  insert – 映射插入语句
+  update – 映射更新语句
+  delete – 映射删除语句
+  select – 映射查询语句
+  下一部分将从语句本身开始来描述每个元素的细节。
+
+  首先本例中映射文件由以下几个节点构成
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE mapper
+          PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+          "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+          <mapper namespace="com.how2java.pojo2">
+              <select id="listBMTableReflection" resultType="BMTableReflection">
+                   select * from BMTableReflection_
+              </select>
+          </mapper>
+
+  分拆理解:
+     前面两句为开头声明
+     <mapper namespace="com.how2java.pojo2">
+     namespace属性
+     在MyBatis中，Mapper中的namespace用于绑定Dao接口的，即面向接口编程。
+     它的好处在于当使用了namespace之后就可以不用写接口实现类，业务逻辑会直接通过这个绑定寻找到相对应的SQL语句进行对应的数据处理
+     不使用namespace,就需要对
+     注意接口中的方法与映射文件中的SQL语句的ID一一对应 。
+     则在代码中可以直接使用面向接口编程而不需要再编写实现类。
+     但是pojo2本身是个文件夹,文件夹下也没有接口类,这个又是怎么回事
+     解释有以下几种:
+     1.在大型项目中，可能存在大量的SQL语句，这时候为每个SQL语句起一个唯一的标识（ID）就变得并不容易了。
+     为了解决这个问题，在MyBatis中，可以为每个映射文件起一个唯一的命名空间，这样定义在这个映射文件中的每个SQL语句就成了定义在这个命名空间中的一个ID。
+     只要我们能够保证每个命名空间中这个ID是唯一的，即使在不同映射文件中的语句ID相同，也不会再产生冲突了。
+     2.namespace即空间命名名称，用于区分实现数据持久化的方式。namespace一般绑定对应的文件的全路径，
+
+       有三种全路径：namespace绑定实体类的全路径，绑定dao接口的全路径，绑定mapper的sql.xml文件。
+
+       2.1 第一种：namespace绑定实体类的全路径：
+           当namespace绑定的是实体类的全路径时，其实现数据持久化的方式为无代理模式实现数据持久化。
+           需要手动实现dao层的接口。
+           <mapper namespace="com.system.pojo.LiveInfo"></namespace>
+
+       2.2 第二种:namespace绑定dao层接口的全路径：
+           当namespace绑定的是dao接口的全路径时，其实现数据持久化的方式为有代理模式实现数据持久化。
+           即会自动产生代理，自动实现数据的持久化，不需要实现dao层的接口。
+           <mapper namespace="com.system.dao.LiveInfoDao"></namespace>
+
+        2.3第三种namespace绑定的是mapper接口对应的sql.xml文件是，其也是有代理模式自动实现数据持久化。
+           但mapper接口对应的sql.xml文件名必须保持一致才能自动实现数据持久化。
+           <mapper namespace="com.system.sql.LiveInfoMapper"></namespace>
+
+        更完整的注解还可以参考:https://blog.csdn.net/ding135ding/article/details/43706537
+
+  8.select 查询
+     1.查询语句是 MyBatis 中最常用的元素之一，光能把数据存到数据库中价值并不大，如果还能重新取出来才有用，多数应用也都是查询比修改要频繁。对每个
+     插入、更新或删除操作，通常对应多个查询操作。这是 MyBatis 的基本原则之一，也是将焦点和努力放到查询和结果映射的原因。简单查询的 select 元素
+     是非常简单的。比如：(没有使用上文中的例句,因为那个太简单)
+     上文例句可以理解为:这个语句被称作为:listBMTableReflection,无参,返回BMTableReflection对象
+     <select id="selectPerson" parameterType="int" resultType="hashmap">
+       SELECT * FROM PERSON WHERE ID = #{id}
+     </select>
+     这个语句被称作 selectPerson，接受一个 int（或 Integer）类型的参数，并返回一个 HashMap 类型的对象，其中的键是列名，值便是结果行中的对应
+     值。注意参数符号：
+     #{id}
+     这就告诉 MyBatis 创建一个预处理语句参数，通过 JDBC，这样的一个参数在 SQL 中会由一个“?”来标识，并被传递到一个新的预处理语句中，就像这样：
+
+     // 下文只是简单的 JDBC 代码, 不是 MyBatis…
+     String selectPerson = "SELECT * FROM PERSON WHERE ID=?";
+     PreparedStatement ps = conn.prepareStatement(selectPerson);
+     ps.setInt(1,id);
+     通过mybatis中映射文件的配置,替代上文的语句
+     再通过测试类TestMybatis中的:
+     session.selectList执行查询语句
+     List<Person> cs = session.selectList("selectPerson");
+     如果查询多个值,如果使用JDBC代码,需要需要很多单独的 JDBC 的代码来提取结果并将它们映射到对象实例中,使用MyBatis节省时间的地方,就是这里,只需要
+     参数,省略其他的JDBC语句,select的参数和结果映射的细节部分如下:
+     select 元素有很多属性允许你配置，来决定每条语句的作用细节。
+     <select
+       id="selectPerson"
+       parameterType="int"
+       parameterMap="deprecated"
+       resultType="hashmap"
+       resultMap="personResultMap"
+       flushCache="false"
+       useCache="true"
+       timeout="10000"
+       fetchSize="256"
+       statementType="PREPARED"
+       resultSetType="FORWARD_ONLY">
+
+       属性	描述
+       id	在命名空间中唯一的标识符，可以被用来引用这条语句。
+       parameterType	将会传入这条语句的参数类的完全限定名或别名。这个属性是可选的，因为 MyBatis 可以通过 TypeHandler 推断出具体传入语句的参数，默认值为 unset。
+       resultType	从这条语句中返回的期望类型的类的完全限定名或别名。注意如果是集合情形，那应该是集合可以包含的类型，而不能是集合本身。使用 resultType 或 resultMap，但不能同时使用。
+       resultMap	外部 resultMap 的命名引用。结果集的映射是 MyBatis 最强大的特性，对其有一个很好的理解的话，许多复杂映射的情形都能迎刃而解。使用 resultMap 或 resultType，但不能同时使用。
+       flushCache	将其设置为 true，任何时候只要语句被调用，都会导致本地缓存和二级缓存都会被清空，默认值：false。
+       useCache	将其设置为 true，将会导致本条语句的结果被二级缓存，默认值：对 select 元素为 true。
+       timeout	这个设置是在抛出异常之前，驱动程序等待数据库返回请求结果的秒数。默认值为 unset（依赖驱动）。
+       fetchSize	这是尝试影响驱动程序每次批量返回的结果行数和这个设置值相等。默认值为 unset（依赖驱动）。
+       statementType	STATEMENT，PREPARED 或 CALLABLE 的一个。这会让 MyBatis 分别使用 Statement，PreparedStatement 或 CallableStatement，默认值：PREPARED。
+       resultSetType	FORWARD_ONLY，SCROLL_SENSITIVE 或 SCROLL_INSENSITIVE 中的一个，默认值为 unset （依赖驱动）。
+       databaseId	如果配置了 databaseIdProvider，MyBatis 会加载所有的不带 databaseId 或匹配当前 databaseId 的语句；如果带或者不带的语句都有，则不带的会被忽略。
+       resultOrdered	这个设置仅针对嵌套结果 select 语句适用：如果为 true，就是假设包含了嵌套结果集或是分组了，这样的话当返回一个主结果行的时候，就不会发生有对前面结果集的引用的情况。这就使得在获取嵌套的结果集的时候不至于导致内存不够用。默认值：false。
+       resultSets	这个设置仅对多结果集的情况适用，它将列出语句执行后返回的结果集并每个结果集给一个名称，名称是逗号分隔的。
+       parameterType和esultType 表示传入参数和输出结果,后续讲解
+
+       关于#{id}
+       mybatis 中使用 sqlMap 进行 sql 查询时，经常需要动态传递参数，例如我们需要根据用户的姓名来筛选用户时，sql 如下：
+
+       select * from user where name = "ruhua";
+
+       上述 sql 中，我们希望 name 后的参数 "ruhua" 是动态可变的，即不同的时刻根据不同的姓名来查询用户。在 sqlMap 的 xml 文件中使用如下
+       的 sql 可以实现动态传递参数 name：
+
+       select * from user where name = #{name};
+
+       或者
+
+       select * from user where name = '${name}';
+
+       对于上述这种查询情况来说，使用 #{ } 和 ${ } 的结果是相同的，但是在某些情况下，我们只能使用二者其一。
+
+       #与$的区别
+
+         参考资料:https://segmentfault.com/a/1190000004617028
+         ${ } 的变量的替换阶段是在动态 SQL 解析阶段，而 #{ }的变量的替换是在 DBMS 中。
+         用法 tips
+         1、能使用 #{ } 的地方就用 #{ }
+         2、表名作为变量时，必须使用 ${ };这是因为，表名是字符串，使用 sql 占位符替换字符串时会带上单引号 ''，这会导致 sql 语法错误，
+
+  9.增删改:insert, update 和 delete
+  数据变更语句 insert，update 和 delete 的实现非常接近：
+  下面就是 insert，update 和 delete 语句的示例和对应的测试类SQL语句：
+
+  <insert id="insertBMTableReflection" parameterType="BMTableReflection" >
+      insert into BMTableReflection_ ( name ) values (#{name})
+  </insert>
+  通过session.insert调用insertBMTableReflection对应的测试类SQL语句
+          BMTableReflection student = new BMTableReflection();
+          student.setName("新增加的同学");
+          session.insert("insertBMTableReflection",student);
+
+
+  <delete id="BMTableReflection">
+      delete from BMTableReflection_ where id = #{id}
+    </delete>
+    通过session.delete调用deleteBMTableReflection,对应的测试类SQL语句
+            BMTableReflection student2 = new BMTableReflection();
+            student2.setId(4);
+            session.delete("deleteBMTableReflection",student2);
+
+  获取,相当于条件查询,通过session.selectOne获取id=3的记录
+      <select id="getBMTableReflection" parameterType="_int" resultType="BMTableReflection">
+              select * from   BMTableReflection_  where id= #{id}
+      </select>
+  通过session.selectOne获取id=3的记录,但是关键词必须使用SelectOne,因为本文中对于Select的输入映射,采用的是默认值,如果要通过select实现获
+  取某一条参数的语句应如下方式实现:
+       <select id="selectBMTableReflection" parameterType="int" resultType="BMTableReflection">
+         SELECT * FROM PERSON WHERE ID = #{id}
+       </select>
+  所以,获取某一条数据的映射语句是:
+      <select id="getBMTableReflection" parameterType="_int" resultType="BMTableReflection">
+              select * from   BMTableReflection_  where id= #{id}
+      </select>
+  通过session.selectOne调用的测试类SQL语句为:
+  BMTableReflection student3=session.selectOne("getBMTableReflection",3);
+  通过System.out.println(student3.getName());输出调用结果,与预期一致
+
+  修改
+      <update id="updateBMTableReflection" parameterType="BMTableReflection" >
+              update BMTableReflection_ set name=#{name} where id=#{id}
+      </update>
+  通过session.update调用的测试类SQL语句为:
+          BMTableReflection student3=session.selectOne("getBMTableReflection",3);//调出id=3的数据并实体化
+          System.out.println(student3.getName());//未改名以前的名字
+          student3.setName("王五");//将实体化的对象的名字更改
+          session.update("updateBMTableReflection",student3);//以更改后的对象更改相应数据
+          BMTableReflection student4=session.selectOne("getBMTableReflection",3);//取出更改后的数据,再次实体化为映射类的对象
+          System.out.println(student3.getName());//输出该对象的名字以验证
+
+          也可以简单点,更改数据后去数据表中核实
+
+  查询所有
+     <select id="listBMTableReflection" resultType="BMTableReflection">
+              select * from BMTableReflection_
+     </select>
+  通过session.selectList调用的测试类SQL语句为:
+  List<BMTableReflection> cs = session.selectList("listBMTableReflection");
+
+  注:以上CRUD操作当中,当parameterType 输入映像为缺省时,默认为表格数据的映射实体类
+
+  输入映射:parameterType和输出映射:resultType
+  在mybatis中，我们常常需要通过输入和输出映射来指定输入和输出的类型。
+  输入映射:parameterType可以有三种类型:简单类型、hashMap以及pojo的包装类型。
+     1、对于简单类型，比如int，String等，我们可以直接进行使用，比如：
+     <select id="findUserByID" parameterType="int" resultType="user">
+      select * from user where id = #{id}
+     </select>
+     这条xml的statement通过用户ID去查找用户信息，此时只有一种查找条件:用户ID;所以我们可以只使用int作为参数的输入类型。但是如果我们需要通过用户
+     的ID和用户性别两个甚至更多的条件来查找用户信息时，就需要用到pojo的包装类型。
+
+     2、pojo包装类型，简单来说就是将所有数据包装成一个简单地java对象，然后传入这个java对象进行查询。
+     <select id="findUserList" parameterType="UserQueryVo" resultType="UserCustom">
+       select * from user
+       where user.sex = #{userCustom.sex} AND user.username like '%${userCustom.username}%'
+     </select>
+    上述的UserQueryVo是在原来用户的基础上进行了包装，以满足更为复杂的查询条件。
+
+    3、hashMap类型，在使用hashMap时需要注意，查询的条件比如说ID和性别是作为key值放在hashMap中，value值是查询的具体条件，比如：
+
+     <select id="findUserByHashMap" parameterType="hashMap" resultType="user">
+         select * from user
+         where user.sex = #{sex} AND user.username = #{username}
+     </select>
+
+
+  输出映射 resultType
+  同样在mapper的statement中，我们需要使用resultType来指定我们查询出的结果的类型，这个类型可以是简单类型和pojo对象以及对象列表，
+  有一个前提：使用resultType进行输出映射，只有查询出来的列名和pojo中的属性名一致，该列才可以映射成功。
+  如果查询出来的列名和pojo中的属性名全部不一致，没有创建pojo对象。
+  只要查询出来的列名和pojo中的属性有一个一致，就会创建pojo对象,不一致的属性的值为null。
+  1、简单类型：比如我们在进行分页操作时需要知道用户总数，此时，我们需要输出类型应该是一个int类型。注意：查询出来的结果集只有一行且一列，可以使用简单
+  类型进行输出映射。
+  比如：
+  <select id="findUserCount" parameterType="UserQueryVo" resultType="int">
+      select count(*) from user where user.sex =  #{userCustom.sex} AND user.username like '%${userCustom.username}%'
+  </select>
+
+  2、pojo对象和pojo对象列表，不管是输出的pojo单个对象还是一个列表（list中包括pojo），在mapper.xml中resultType指定的类型是一样的。
+  在mapper.java指定的方法返回值类型不一样：
+
+ （1）输出单个对象：
+  public User findUserById(int id) throws Exception;
+
+  (2）输出对象列表：
+  public List<User> findUserByName(String name) throws Exception;
+
+  生成的动态代理对象中是根据mapper方法的返回值类型确定是调用selectOne(返回单个对象调用)还是selectList （返回集合对象调用 ）.
+  Result Maps
+  resultMap 元素是 MyBatis 中最重要最强大的元素。它可以让你从 90% 的 JDBC ResultSets 数据提取代码中解放出来, 并在一些情形下允许你做一些
+  JDBC 不支持的事情。 实际上，在对复杂语句进行联合映射的时候，它很可能可以代替数千行的同等功能的代码。 ResultMap 的设计思想是，简单的语句不需要
+  明确的结果映射，而复杂一点的语句只需要描述它们的关系就行了。
+
+  ResultMaps,暂未涉及,将来补上该部分知识
+
+  模糊查询
+  提供listBMTableReflection2查询语句,实现对name模糊查询
+  <select id="listBMTableReflection2"  parameterType="string" resultType="BMTableReflection">
+              select * from   BMTableReflection_  where name like concat('%',#{0},'%')
+  </select>
+  对应的测试类查询语句如下
+        List<BMTableReflection> cs2 = session.selectList("listBMTableReflection2","新增");
+        for(BMTableReflection s:cs2){
+            System.out.println(s.getName());
+        }
+
+  多条件查询
+  提供listBMTableReflection3查询语句,实现对name和id模糊查询
+    注意查询条件中:where id>#{id} and name like concat('%',#{name},'%') //{}中的id和name而不是0
+    </select>
+      <select id="listBMTableReflection3"  parameterType="map" resultType="BMTableReflection">
+                select * from   BMTableReflection_  where id>#{id} and name like concat('%',#{name},'%')
+    </select>
+  因为是多个参数，而selectList方法又只接受一个参数对象，所以需要把多个参数放在Map里，然后把这个Map对象作为参数传递进去
+            Map<String,Object> params = new HashMap<>();
+            params.put("id", 3);
+            params.put("name", "新增");
+            List<BMTableReflection> cs3 = session.selectList("listBMTableReflection3",params);
+            for(BMTableReflection s:cs3){
+                System.out.println(s.getName());
+            }
+
+  遇到的问题:
+  1.输入映射map代表什么
+  2. Map<String,Object> params = new HashMap<>();如何翻译的?新增的hashmap类属于map的一种吗?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
